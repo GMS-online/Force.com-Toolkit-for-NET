@@ -6,6 +6,8 @@ using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using System.Reflection;
 using Salesforce.Common;
+using Salesforce.Common.Models;
+using Salesforce.Common.Soql;
 using Salesforce.Common.Models.Json;
 using Salesforce.Common.Models.Xml;
 
@@ -13,8 +15,10 @@ namespace Salesforce.Force
 {
     public class ForceClient : IForceClient, IDisposable
     {
-        private readonly XmlHttpClient _xmlHttpClient;
-        private readonly JsonHttpClient _jsonHttpClient;
+        protected readonly XmlHttpClient _xmlHttpClient;
+        protected readonly JsonHttpClient _jsonHttpClient;
+
+	      public ISelectListResolver SelectListResolver { get; set; }
 
         public ForceClient(string instanceUrl, string accessToken, string apiVersion)
             : this(instanceUrl, accessToken, apiVersion, new HttpClient(), new HttpClient())
@@ -31,6 +35,8 @@ namespace Salesforce.Force
 
             _jsonHttpClient = new JsonHttpClient(instanceUrl, apiVersion, accessToken, httpClientForJson);
             _xmlHttpClient = new XmlHttpClient(instanceUrl, apiVersion, accessToken, httpClientForXml);
+            
+            SelectListResolver = new DataMemberSelectListResolver();
         }
 
         // STANDARD METHODS
@@ -56,6 +62,15 @@ namespace Salesforce.Force
             return _jsonHttpClient.HttpGetAsync<QueryResult<T>>(string.Format("queryAll/?q={0}", Uri.EscapeDataString(query)));
         }
 
+        public async Task<System.IO.Stream> GetBlobAsync(String objectName, String objectId, String fieldName)
+        {
+            if (string.IsNullOrEmpty(objectName)) throw new ArgumentNullException(nameof(objectName));
+            if (string.IsNullOrEmpty(objectId)) throw new ArgumentNullException(nameof(objectId));
+            if (string.IsNullOrEmpty(fieldName)) throw new ArgumentNullException(nameof(fieldName));
+
+            return await _jsonHttpClient.HttpGetBlobAsync($"sobjects/{objectName}/{objectId}/{fieldName}");
+        }
+
         public async Task<T> ExecuteRestApiAsync<T>(string apiName)
         {
             if (string.IsNullOrEmpty(apiName)) throw new ArgumentNullException("apiName");
@@ -73,17 +88,12 @@ namespace Salesforce.Force
             return response;
         }
 
-		public async Task<T> QueryByIdAsync<T>(string objectName, string recordId)
+        public async Task<T> QueryByIdAsync<T>(string objectName, string recordId)
         {
             if (string.IsNullOrEmpty(objectName)) throw new ArgumentNullException("objectName");
             if (string.IsNullOrEmpty(recordId)) throw new ArgumentNullException("recordId");
 
-		    var fields = string.Join(", ", typeof(T).GetRuntimeProperties()
-		        .Select(p => {
-		            var customAttribute = p.GetCustomAttribute<DataMemberAttribute>();
-		            return (customAttribute == null || customAttribute.Name == null) ? p.Name : customAttribute.Name;
-		        }));
-
+            var fields = SelectListResolver.GetFieldsList<T>();
             var query = string.Format("SELECT {0} FROM {1} WHERE Id = '{2}'", fields, objectName, recordId);
             var results = await QueryAsync<T>(query).ConfigureAwait(false);
 
@@ -96,6 +106,17 @@ namespace Salesforce.Force
             if (record == null) throw new ArgumentNullException("record");
 
             return await _jsonHttpClient.HttpPostAsync<SuccessResponse>(record, string.Format("sobjects/{0}", objectName)).ConfigureAwait(false);
+        }
+
+        public async Task<SaveResponse> CreateAsync(string objectName, CreateRequest request)
+        {
+            if (string.IsNullOrEmpty(objectName)) throw new ArgumentNullException("objectName");
+            if (request == null)
+                throw new ArgumentNullException("request");
+
+            var result = await _jsonHttpClient.HttpPostAsync<SaveResponse>(request, string.Format("composite/tree/{0}", objectName)).ConfigureAwait(false);
+
+            return result;
         }
 
         public Task<SuccessResponse> UpdateAsync(string objectName, string recordId, object record)
@@ -117,6 +138,17 @@ namespace Salesforce.Force
             return _jsonHttpClient.HttpPatchAsync(record, string.Format("sobjects/{0}/{1}/{2}", objectName, externalFieldName, externalId));
         }
 
+        public Task<SuccessResponse> UpsertExternalAsync(string objectName, string externalFieldName, string externalId, object record, bool ignoreNull)
+        {
+            if (string.IsNullOrEmpty(objectName)) throw new ArgumentNullException("objectName");
+            if (string.IsNullOrEmpty(externalFieldName)) throw new ArgumentNullException("externalFieldName");
+            if (string.IsNullOrEmpty(externalId)) throw new ArgumentNullException("externalId");
+            if (record == null) throw new ArgumentNullException("record");
+
+            return _jsonHttpClient.HttpPatchAsync(record, string.Format("sobjects/{0}/{1}/{2}", objectName, externalFieldName, externalId), ignoreNull);
+        }
+
+
         public Task<bool> DeleteAsync(string objectName, string recordId)
         {
             if (string.IsNullOrEmpty(objectName)) throw new ArgumentNullException("objectName");
@@ -133,7 +165,7 @@ namespace Salesforce.Force
 
             return _jsonHttpClient.HttpDeleteAsync(string.Format("sobjects/{0}/{1}/{2}", objectName, externalFieldName, externalId));
         }
-        
+
         public Task<DescribeGlobalResult<T>> GetObjectsAsync<T>()
         {
             return _jsonHttpClient.HttpGetAsync<DescribeGlobalResult<T>>("sobjects");

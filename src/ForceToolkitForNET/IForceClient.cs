@@ -6,7 +6,7 @@ using Salesforce.Common.Models.Xml;
 
 namespace Salesforce.Force
 {
-    public interface IForceClient: IDisposable
+    public interface IForceClient : IDisposable
     {
 
         // STANDARD
@@ -17,8 +17,10 @@ namespace Salesforce.Force
         Task<T> ExecuteRestApiAsync<T>(string apiName);
         Task<T> ExecuteRestApiAsync<T>(string apiName, object inputObject);
         Task<SuccessResponse> CreateAsync(string objectName, object record);
+        Task<SaveResponse> CreateAsync(string objectName, CreateRequest request);
         Task<SuccessResponse> UpdateAsync(string objectName, string recordId, object record);
         Task<SuccessResponse> UpsertExternalAsync(string objectName, string externalFieldName, string externalId, object record);
+        Task<SuccessResponse> UpsertExternalAsync(string objectName, string externalFieldName, string externalId, object record, bool ignoreNull);
         Task<bool> DeleteAsync(string objectName, string recordId);
         Task<bool> DeleteExternalAsync(string objectName, string externalFieldName, string externalId);
         Task<DescribeGlobalResult<T>> GetObjectsAsync<T>();

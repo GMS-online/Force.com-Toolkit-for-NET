@@ -1,8 +1,8 @@
-# Force.com Toolkit for .NET [![Build Status](https://travis-ci.org/developerforce/Force.com-Toolkit-for-NET.svg?branch=master)](https://travis-ci.org/developerforce/Force.com-Toolkit-for-NET) [![Build status](https://ci.appveyor.com/api/projects/status/43y1npcb2q0u7aca)](https://ci.appveyor.com/project/WadeWegner/force-com-toolkit-for-net)
+# Force.com Toolkit for .NET [![Build Status](https://travis-ci.org/developerforce/Force.com-Toolkit-for-NET.svg?branch=master)](https://travis-ci.org/developerforce/Force.com-Toolkit-for-NET)
 
-The Force.com Toolkit for .NET provide an easy way for .NET developers to interact with the Force.com, Force.com Bulk & Chatter REST APIs using native libraries.
+This SDK is now targeting .NET Standard 2.0, .NET 4.5.2, .NET 4.6.2, and .NET 4.7.2.
 
-These toolkits are built using the [Async/Await pattern](http://msdn.microsoft.com/en-us/library/hh191443.aspx) for asynchronous development and .NET [portable class libraries](http://msdn.microsoft.com/en-us/library/gg597391.aspx), making it easy to target multiple Microsoft platforms, including .NET 4.5, Windows Phone 8, Windows 8/8.1, and iOS/Android using Xamarin and Mono.NET.
+The Force.com Toolkit for .NET provides an easy way for .NET developers to interact with the Lighting Platform APIs using native libraries.
 
 The Common Libraries for .NET provides functionality used by the [Force.com Toolkit for .NET](https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/src/ForceToolkitForNET) and the [Chatter Toolkit for .NET](https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/src/ChatterToolkitForNET). While you can use the Common Libraries for .NET independently, it is recommended that you use it through one of the toolkits.
 
@@ -10,40 +10,21 @@ The Common Libraries for .NET provides functionality used by the [Force.com Tool
 
 ### Published Packages
 
-You can try the libraries immmediately by installing the following [DeveloperForce NuGet packages](https://www.nuget.org/profiles/DeveloperForce/).
+You can try the libraries immmediately by installing the [DeveloperForce.Force](https://www.nuget.org/packages/DeveloperForce.Force/) and [DeveloperForce.Chatter](https://www.nuget.org/packages/DeveloperForce.Chatter/) packages:
+
+Package Manager:
 
 ```
 Install-Package DeveloperForce.Force
 Install-Package DeveloperForce.Chatter
 ```
 
-## Samples 
+.NET CLI:
 
-The toolkit includes the following sample applications.
-
-### WebServerOAuthFlow
-
-You can find this sample here: https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/samples/WebServerOAuthFlow
-
-This sample shows how you can use the [Web Server OAuth Authentication Flow](http://www.salesforce.com/us/developer/docs/api_rest/Content/intro_understanding_web_server_oauth_flow.htm) to authorize a user and query the Force.com API. This sample uses MVC 5 and WebAPIs to demonstrate how you can retrieve a user access token and make an AJAX call to your API to retrieve data from Force.com and bind to your page using Knockout.js.
-
-### Simple Console Application
-
-You can find this sample here: https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/samples/SimpleConsole
-
-This sample shows how to write a console application that leverages the async/await paradigm of .NET 4.5 and uses the toolkit to log in to and communicate with a Salesforce organization. Useful for quick POC applications and scheduled jobs.
-
-### Simple Bulk Console Application
-
-You can find this sample here: https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/samples/SimpleBulkConsole
-
-This sample shows how to write a console application to create, update and delete multiple records using the bulk functionality in the toolkit.
-
-### Advanced Bulk Console Application
-
-You can find this sample here: https://github.com/developerforce/Force.com-Toolkit-for-NET/tree/master/samples/AdvancedBulkConsole
-
-This sample shows how to use the methods on the ```BulkForceClient``` to control bulk jobs step by step. It gives an example of a polling method that you could change to implement your own custom polling.
+```
+dotnet add package DeveloperForce.Force
+dotnet add package DeveloperForce.Chatter
+```
 
 ## Operations
 
@@ -57,7 +38,7 @@ To access the Force.com APIs you must have a valid Access Token. Currently there
 
 The Username-Password Authentication Flow is a straightforward way to get an access token. Simply provide your consumer key, consumer secret, username, and password.
 
-```
+```cs
 var auth = new AuthenticationClient();
 
 await auth.UsernamePasswordAsync("YOURCONSUMERKEY", "YOURCONSUMERSECRET", "YOURUSERNAME", "YOURPASSWORD");
@@ -69,7 +50,7 @@ The Web-Server Authentication Flow requires a few additional steps but has the a
 
 First, you need to authenticate your user. You can do this by creating a URL that directs the user to the Salesforce authentication service. You'll pass along some key information, including your consumer key (which identifies your Connected App) and a callback URL to your service.
 
-```
+```cs
 var url =
     Common.FormatAuthUrl(
         "https://login.salesforce.com/services/oauth2/authorize", // if using sandbox org then replace login with test
@@ -80,7 +61,7 @@ var url =
 
 After the user logs in you'll need to handle the callback and retrieve the code that is returned. Using this code, you can then request an access token.
 
-```
+```cs
 await auth.WebServerAsync("YOURCONSUMERKEY", "YOURCONSUMERSECRET", "YOURCALLBACKURL", code);
 ```
 
@@ -92,7 +73,7 @@ After this completes successfully you will receive a valid Access Token and Inst
 
 Using this information, we can now construct our Force.com client.
 
-````
+```cs
 var instanceUrl = auth.InstanceUrl;
 var accessToken = auth.AccessToken;
 var apiVersion = auth.ApiVersion;
@@ -109,7 +90,7 @@ Below you'll find a few examples that show how to use the toolkit.
 
 You can create with the following code:
 
-```
+```cs
 public class Account
 {
     public string Id { get; set; }
@@ -117,15 +98,13 @@ public class Account
     public string Description { get; set; }
 }
 
-...
-
 var account = new Account() { Name = "New Account", Description = "New Account Description" };
 var id = await client.CreateAsync("Account", account);
 ```
 
 You can also create with a non-strongly typed object:
 
-```
+```cs
 var client = new ForceClient(_consumerKey, _consumerSecret, _username, _password);
 var account = new { Name = "New Name", Description = "New Description" };
 var id = await client.CreateAsync("Account", account);
@@ -135,7 +114,7 @@ var id = await client.CreateAsync("Account", account);
 
 You can update an object:
 
-```
+```cs
 var account = new Account() { Name = "New Name", Description = "New Description" };
 var id = await client.CreateAsync("Account", account);
 
@@ -148,7 +127,7 @@ var success = await client.UpdateAsync("Account", id, account);
 
 You can delete an object:
 
-```
+```cs
 var account = new Account() { Name = "New Name", Description = "New Description" };
 var id = await client.Create("Account", account);
 var success = await client.DeleteAsync("Account", id)
@@ -158,8 +137,7 @@ var success = await client.DeleteAsync("Account", id)
 
 You can query for objects:
 
-
-```
+```cs
 public class Account
 {
     public string Id { get; set; }
@@ -167,7 +145,6 @@ public class Account
     public string Description { get; set; }
 }
 
-...
 
 var accounts = await client.QueryAsync<Account>("SELECT id, name, description FROM Account");
 
@@ -179,28 +156,26 @@ foreach (var account in accounts.records)
 
 ### Bulk Sample Code
 
-Below are some simple examples that show how to use the ```BulkForceClient```
+Below are some simple examples that show how to use the `BulkForceClient`
 
 **NOTE:** The following features are currently not supported
 
-* CSV data type requests / responses
-* Zipped attachment uploads
-* Serial bulk jobs
-* Query type bulk jobs
+- CSV data type requests / responses
+- Zipped attachment uploads
+- Serial bulk jobs
+- Query type bulk jobs
 
 #### Create
 
 You can create multiple records at once with the Bulk client:
 
-```
-public class Account 
+```cs
+public class Account
 {
     public string Id { get; set; }
     public string Name { get; set; }
     public string Description { get; set; }
 }
-
-...
 
 var accountsBatch1 = new SObjectList<Account>
 {
@@ -218,14 +193,14 @@ var accountsBatch3 = new SObjectList<Account>
 	new Account {Name = "TestStAccount6"}
 };
 
-var accountsBatchList = new List<SObjectList<Account>> 
-{ 
+var accountsBatchList = new List<SObjectList<Account>>
+{
 	accountsBatch1,
 	accountsBatch2,
 	accountsBatch3
 };
 
-var results = await bulkClient.RunJobAndPollAsync("Account", 
+var results = await bulkClient.RunJobAndPollAsync("Account",
 						Bulk.OperationType.Insert, accountsBatchList);
 ```
 
@@ -234,89 +209,86 @@ For more details on the Salesforce Bulk API, see [the documentation](https://res
 
 You can also create objects dynamically using the inbuilt SObject class:
 
-```
+```cs
 var accountsBatch1 = new SObjectList<SObject>
 {
-	new SObject 
+	new SObject
 	{
 		{"Name" = "TestDyAccount1"}
 	},
-	new SObject 
+	new SObject
 	{
 		{"Name" = "TestDyAccount2"}
 	}
 };
 
-var accountsBatchList = new List<SObjectList<SObject>> 
-{ 
+var accountsBatchList = new List<SObjectList<SObject>>
+{
 	accountsBatch1
 };
 
-var results = await bulkClient.RunJobAndPollAsync("Account", 
+var results = await bulkClient.RunJobAndPollAsync("Account",
 						Bulk.OperationType.Insert, accountsBatchList);
-
 ```
- 
+
 #### Update
 
-Updating multiple records follows the same pattern as above, just change the ```Bulk.OperationType``` to ```Bulk.OperationType.Update```
+Updating multiple records follows the same pattern as above, just change the `Bulk.OperationType` to `Bulk.OperationType.Update`
 
-```
+```cs
 var accountsBatch1 = new SObjectList<SObject>
 {
-	new SObject 
+	new SObject
 	{
 		{"Id" = "YOUR_RECORD_ID"},
 		{"Name" = "TestDyAccount1Renamed"}
 	},
-	new SObject 
+	new SObject
 	{
 		{"Id" = "YOUR_RECORD_ID"},
 		{"Name" = "TestDyAccount2Renamed"}
 	}
 };
 
-var accountsBatchList = new List<SObjectList<SObject>> 
-{ 
+var accountsBatchList = new List<SObjectList<SObject>>
+{
 	accountsBatch1
 };
 
-var results = await bulkClient.RunJobAndPollAsync("Account", 
+var results = await bulkClient.RunJobAndPollAsync("Account",
 						Bulk.OperationType.Update, accountsBatchList);
-
 ```
 
 #### Delete
 
-As above, you can delete multiple records with ```Bulk.OperationType.Delete```
+As above, you can delete multiple records with `Bulk.OperationType.Delete`
 
-```
+```cs
 var accountsBatch1 = new SObjectList<SObject>
 {
-	new SObject 
+	new SObject
 	{
 		{"Id" = "YOUR_RECORD_ID"}
 	},
-	new SObject 
+	new SObject
 	{
 		{"Id" = "YOUR_RECORD_ID"}
 	}
 };
 
-var accountsBatchList = new List<SObjectList<SObject>> 
-{ 
+var accountsBatchList = new List<SObjectList<SObject>>
+{
 	accountsBatch1
 };
 
-var results = await bulkClient.RunJobAndPollAsync("Account", 
+var results = await bulkClient.RunJobAndPollAsync("Account",
 						Bulk.OperationType.Delete, accountsBatchList);
-
 ```
 
-## Contributing to the Repository ###
+## Contributing to the Repository
 
-If you find any issues or opportunities for improving this respository, fix them!  Feel free to contribute to this project by [forking](http://help.github.com/fork-a-repo/) this repository and make changes to the content.  Once you've made your changes, share them back with the community by sending a pull request. Please see [How to send pull requests](http://help.github.com/send-pull-requests/) for more information about contributing to Github projects.
+If you find any issues or opportunities for improving this respository, fix them! Feel free to contribute to this project by [forking](http://help.github.com/fork-a-repo/) this repository and make changes to the content. Once you've made your changes, share them back with the community by sending a pull request. Please see [How to send pull requests](http://help.github.com/send-pull-requests/) for more information about contributing to Github projects.
 
-## Reporting Issues ###
+## Reporting Issues
 
 If you find any issues with this demo that you can't fix, feel free to report them in the [issues](https://github.com/developerforce/Force.com-Toolkit-for-NET/issues) section of this repository.
